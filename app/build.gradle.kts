@@ -1,17 +1,7 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
-
-// 从 local.properties 读取密钥，该文件不纳入版本控制
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
-}
-val apiToken: String = localProperties.getProperty("API_TOKEN") ?: ""
-
 
 android {
     namespace = "demo.app.analysisapp"
@@ -23,8 +13,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "2.0"
-
-        buildConfigField("String", "API_TOKEN", "\"$apiToken\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,7 +30,6 @@ android {
     }
     buildFeatures {
         compose = true
-        buildConfig = true
     }
 }
 

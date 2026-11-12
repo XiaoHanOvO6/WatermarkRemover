@@ -1,6 +1,5 @@
 package demo.app.analysisapp.data
 
-import demo.app.analysisapp.BuildConfig
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -9,8 +8,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 // 小虫 API 聚合解析接口配置
-// token 通过 local.properties 的 API_TOKEN 注入，不写入源码
-internal val API_TOKEN: String = BuildConfig.API_TOKEN
+//主token
+internal const val API_TOKEN = "自己去申请"
+//子密钥（不能用的）
+//internal const val API_TOKEN = "api-c5ba36cfab09ec5f49ee085c8d6189b651dac54cbac1f37c"
 internal const val API_ENDPOINT = "https://api.ovo1.cc/api/analysis"
 internal val DouyinUrlRegex = Regex("""https?://[^\s\]\)）>]+""")
 
