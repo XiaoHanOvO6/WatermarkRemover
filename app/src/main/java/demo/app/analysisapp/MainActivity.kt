@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import demo.app.analysisapp.data.ApiChannel
 import demo.app.analysisapp.settings.ThemeMode
 import demo.app.analysisapp.theme.小寒去水印Theme
 
@@ -27,9 +28,13 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.valueOf(prefs.getString("theme_mode", null).orEmpty())
             }.getOrDefault(ThemeMode.System)
             val initialColor = prefs.getString("theme_color", null) ?: "跟随系统"
+            val initialChannel = runCatching {
+                ApiChannel.valueOf(prefs.getString("api_channel", null).orEmpty())
+            }.getOrDefault(ApiChannel.Line1)
 
             var themeMode by remember { mutableStateOf(initialMode) }
             var themeColor by remember { mutableStateOf(initialColor) }
+            var apiChannel by remember { mutableStateOf(initialChannel) }
 
             val useDarkTheme = when (themeMode) {
                 ThemeMode.System -> isSystemInDarkTheme()
@@ -48,6 +53,11 @@ class MainActivity : ComponentActivity() {
                     onThemeColorChange = {
                         themeColor = it
                         prefs.edit().putString("theme_color", it).apply()
+                    },
+                    apiChannel = apiChannel,
+                    onApiChannelChange = {
+                        apiChannel = it
+                        prefs.edit().putString("api_channel", it.name).apply()
                     }
                 )
             }

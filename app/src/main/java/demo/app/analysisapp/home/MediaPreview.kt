@@ -54,19 +54,71 @@ internal fun MediaPreview(
     isMakingVideo: Boolean,
     isSaving: Boolean,
     onSaveSingleImage: (String) -> Unit,
-    onSaveVideo: (Int) -> Unit
+    onSaveVideo: (Int) -> Unit,
+    onSaveRemoteVideo: (Int) -> Unit
 ) {
     // 同一时间只播放一个视频，点另一个卡片就切过去
-    var playingIndex by remember(videos) { mutableIntStateOf(0) }
+    var playingIndex by remember(videos, result.videoUrls) { mutableIntStateOf(0) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         when (result.kind) {
             ContentKind.Video -> {
-                val videoUrl = result.videoUrl
-                if (videoUrl.isNullOrBlank()) {
-                    StatusCard(text = "没有可预览的视频", isError = true)
-                } else {
-                    VideoPreview(videoUrl = videoUrl)
+                val videoUrls = result.videoUrls
+                when {
+                    videoUrls.isEmpty() -> StatusCard(text = "没有可预览的视频", isError = true)
+
+                    videoUrls.size == 1 -> VideoPreview(videoUrl = videoUrls[0])
+
+                    else -> {
+                        Text(
+                            text = "视频（横向滑动查看）",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(end = 4.dp)
+                        ) {
+                            itemsIndexed(videoUrls) { index, videoUrl ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(240.dp)
+                                        .height(320.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .clickable { playingIndex = index }
+                                ) {
+                                    RemoteVideoCardPreview(
+                                        videoUrl = videoUrl,
+                                        isPlaying = playingIndex == index,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                    Surface(
+                                        modifier = Modifier
+                                            .align(Alignment.TopEnd)
+                                            .padding(8.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = Color.Black.copy(alpha = 0.55f)
+                                    ) {
+                                        Text(
+                                            text = "${index + 1} / ${videoUrls.size}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(
+                                                horizontal = 8.dp,
+                                                vertical = 3.dp
+                                            )
+                                        )
+                                    }
+                                    SaveIcon(
+                                        isSaving = isSaving,
+                                        contentDescription = "保存这个视频",
+                                        modifier = Modifier.align(Alignment.BottomEnd),
+                                        onClick = { onSaveRemoteVideo(index) }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -305,6 +357,44 @@ private fun LocalVideoPreview(
             if (videoView.tag != path) {
                 videoView.tag = path
                 videoView.setVideoPath(path)
+            }
+            if (isPlaying) {
+                if (!videoView.isPlaying) videoView.start()
+            } else {
+                if (videoView.isPlaying) videoView.pause()
+                if (videoView.currentPosition == 0) videoView.seekTo(1)
+            }
+        }
+    )
+}
+
+/** 播放远程视频卡片：isPlaying 为 true 时播放，否则停在第一帧 */
+@Composable
+private fun RemoteVideoCardPreview(
+    videoUrl: String,
+    isPlaying: Boolean,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            VideoView(context).apply {
+                tag = videoUrl
+                setVideoURI(Uri.parse(videoUrl))
+                setOnPreparedListener { mediaPlayer ->
+                    mediaPlayer.isLooping = true
+                    if (isPlaying) {
+                        start()
+                    } else {
+                        seekTo(1)
+                    }
+                }
+            }
+        },
+        update = { videoView ->
+            if (videoView.tag != videoUrl) {
+                videoView.tag = videoUrl
+                videoView.setVideoURI(Uri.parse(videoUrl))
             }
             if (isPlaying) {
                 if (!videoView.isPlaying) videoView.start()

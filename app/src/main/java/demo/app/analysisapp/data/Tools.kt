@@ -5,6 +5,8 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import java.net.HttpURLConnection
 import java.net.URL
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** 读取剪贴板文本 */
 internal fun readClipboardText(context: Context): String {
@@ -35,5 +37,24 @@ internal fun loadImageBitmap(imageUrl: String): android.graphics.Bitmap? {
         }
     } finally {
         connection.disconnect()
+    }
+}
+
+/** 把 JSON 数组转成字符串列表 */
+internal fun JSONArray?.toStringList(): List<String> {
+    if (this == null) return emptyList()
+    return buildList {
+        for (index in 0 until length()) {
+            // 兼容两种返回：直接是字符串，或 {"url"/"image": "..."} 对象
+            val value = if (opt(index) is JSONObject) {
+                val item = optJSONObject(index)
+                item?.optString("url").orEmpty().ifBlank { item?.optString("image").orEmpty() }
+            } else {
+                optString(index)
+            }
+            if (value.isNotBlank()) {
+                add(value)
+            }
+        }
     }
 }

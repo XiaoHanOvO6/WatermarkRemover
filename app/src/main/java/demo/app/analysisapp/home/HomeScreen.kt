@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import demo.app.analysisapp.data.ApiChannel
 import demo.app.analysisapp.data.ParseResult
 import demo.app.analysisapp.data.canMakeVideo
 import demo.app.analysisapp.data.extractDouyinUrl
@@ -30,6 +31,7 @@ import demo.app.analysisapp.data.readClipboardText
 import demo.app.analysisapp.data.requestAnalysis
 import demo.app.analysisapp.data.saveLocalVideo
 import demo.app.analysisapp.data.saveParseResult
+import demo.app.analysisapp.data.saveRemoteVideo
 import demo.app.analysisapp.data.saveSingleImage
 import demo.app.analysisapp.data.timestamp
 import demo.app.analysisapp.theme.小寒去水印Theme
@@ -38,7 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 @Composable
-internal fun DouyinParserScreen(state: HomeUiState) {
+internal fun DouyinParserScreen(state: HomeUiState, apiChannel: ApiChannel) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -98,20 +100,41 @@ internal fun DouyinParserScreen(state: HomeUiState) {
         }
     }
 
+    fun startSaveRemoteVideoAt(index: Int) {
+        val videoUrl = state.result?.videoUrls?.getOrNull(index) ?: return
+        scope.launch {
+            state.isSaving = true
+            state.saveMessage = null
+            try {
+                withContext(Dispatchers.IO) {
+                    saveRemoteVideo(context, videoUrl, index)
+                }
+                state.saveMessage = "视频已保存到相册"
+            } catch (error: Exception) {
+                state.saveMessage = error.message ?: "保存失败"
+            } finally {
+                state.isSaving = false
+            }
+        }
+    }
+
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         val target = state.pendingSave
         val imageUrl = state.pendingSaveImageUrl
         val videoIndex = state.pendingSaveVideoIndex
+        val remoteVideoIndex = state.pendingSaveRemoteVideoIndex
         state.pendingSave = null
         state.pendingSaveImageUrl = null
         state.pendingSaveVideoIndex = null
+        state.pendingSaveRemoteVideoIndex = null
         if (granted) {
             when {
                 target != null -> startSave(target)
                 imageUrl != null -> startSaveImage(imageUrl)
                 videoIndex != null -> startSaveVideoAt(videoIndex)
+                remoteVideoIndex != null -> startSaveRemoteVideoAt(remoteVideoIndex)
             }
         } else {
             state.saveMessage = "没有存储权限，无法保存"
@@ -163,6 +186,21 @@ internal fun DouyinParserScreen(state: HomeUiState) {
         }
     }
 
+    fun requestSaveRemoteVideoAt(index: Int) {
+        val needsStoragePermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+
+        if (needsStoragePermission) {
+            state.pendingSaveRemoteVideoIndex = index
+            storagePermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            startSaveRemoteVideoAt(index)
+        }
+    }
+
     val extractedUrl = remember(state.inputText) { extractDouyinUrl(state.inputText) }
 
     Column(
@@ -211,7 +249,7 @@ internal fun DouyinParserScreen(state: HomeUiState) {
                     state.videos = emptyList()
                     try {
                         val parsed = withContext(Dispatchers.IO) {
-                            requestAnalysis(url)
+                            requestAnalysis(url, apiChannel)
                         }
                         state.result = parsed
                         // 图文 / live：解析完直接把每张图合成成视频，界面上展示视频
@@ -234,7 +272,12 @@ internal fun DouyinParserScreen(state: HomeUiState) {
                     } catch (error: Exception) {
                         state.result = null
                         state.videos = emptyList()
-                        state.errorMessage = error.message ?: "解析失败"
+                        state.errorMessage = buildString {
+                            append(apiChannel.label)
+                            append("解析失败：")
+                            append(error.message ?: "未知错误")
+                            append("，可在设置里切换线路")
+                        }
                     } finally {
                         state.isParsing = false
                         state.isMakingVideo = false
@@ -254,7 +297,8 @@ internal fun DouyinParserScreen(state: HomeUiState) {
                 isSaving = state.isSaving,
                 onSave = { requestSave(it) },
                 onSaveSingleImage = { requestSaveImage(it) },
-                onSaveVideo = { index -> requestSaveVideoAt(index) }
+                onSaveVideo = { index -> requestSaveVideoAt(index) },
+                onSaveRemoteVideo = { index -> requestSaveRemoteVideoAt(index) }
             )
         }
     }
@@ -280,6 +324,6 @@ private fun Header() {
 @Composable
 private fun DouyinParserScreenPreview() {
     小寒去水印Theme {
-        DouyinParserScreen(state = remember { HomeUiState() })
+        DouyinParserScreen(state = remember { HomeUiState() }, apiChannel = ApiChannel.Line1)
     }
 }

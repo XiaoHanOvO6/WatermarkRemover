@@ -2,6 +2,7 @@ package demo.app.analysisapp.data
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -18,33 +19,44 @@ import java.util.Locale
 internal fun saveParseResult(context: Context, result: ParseResult): Int {
     return when (result.kind) {
         ContentKind.Video -> {
-            val videoUrl = result.videoUrl ?: throw IOException("没有可保存的视频直链")
-            saveRemoteFile(
-                context = context,
-                sourceUrl = videoUrl,
-                displayName = "douyin_${timestamp()}.mp4",
-                mimeType = "video/mp4",
-                collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                relativePath = "${Environment.DIRECTORY_MOVIES}/小寒去水印"
-            )
-            1
+            if (result.videoUrls.isEmpty()) throw IOException("没有可保存的视频直链")
+            val multiple = result.videoUrls.size > 1
+            result.videoUrls.forEachIndexed { index, videoUrl ->
+                saveRemoteFile(
+                    context = context,
+                    sourceUrl = videoUrl,
+                    displayName = "douyin_${timestamp()}${if (multiple) "_${index + 1}" else ""}.mp4",
+                    mimeType = "video/mp4",
+                    collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    relativePath = "${Environment.DIRECTORY_MOVIES}/小寒去水印"
+                )
+            }
+            result.videoUrls.size
         }
 
         ContentKind.Images -> {
             if (result.imageUrls.isEmpty()) {
                 throw IOException("没有可保存的图片")
             }
+            var savedCount = 0
+            var firstError: Exception? = null
             result.imageUrls.forEachIndexed { index, imageUrl ->
-                saveRemoteFile(
-                    context = context,
-                    sourceUrl = imageUrl,
-                    displayName = "douyin_${timestamp()}_${index + 1}.jpg",
-                    mimeType = "image/jpeg",
-                    collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    relativePath = "${Environment.DIRECTORY_PICTURES}/小寒去水印"
-                )
+                try {
+                    saveRemoteImageAsJpeg(
+                        context = context,
+                        sourceUrl = imageUrl,
+                        displayName = "douyin_${timestamp()}_${index + 1}.jpg"
+                    )
+                    savedCount++
+                } catch (error: Exception) {
+                    // 单张失败不影响其他图片
+                    if (firstError == null) firstError = error
+                }
             }
-            result.imageUrls.size
+            if (savedCount == 0) {
+                throw IOException(firstError?.message ?: "图片保存失败")
+            }
+            savedCount
         }
 
         ContentKind.Unsupported -> throw IOException("暂不支持保存 ${result.rawType}")
@@ -101,14 +113,71 @@ internal fun saveRemoteFile(
     }
 }
 
-internal fun saveSingleImage(context: Context, imageUrl: String) {
+/**
+ * 下载图片并统一转成 JPEG 保存。
+ * 云汐接口返回的图片是 webp，直接按后缀存会导致部分相册打不开，所以这里解码后重新编码。
+ */
+internal fun saveRemoteImageAsJpeg(
+    context: Context,
+    sourceUrl: String,
+    displayName: String
+) {
+    val resolver = context.contentResolver
+    val values = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, displayName)
+        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                "${Environment.DIRECTORY_PICTURES}/小寒去水印"
+            )
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
+        }
+    }
+
+    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+        ?: throw IOException("无法创建保存文件")
+    try {
+        val bitmap = loadImageBitmap(sourceUrl) ?: throw IOException("图片下载失败")
+        try {
+            resolver.openOutputStream(uri)?.use { output ->
+                if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)) {
+                    throw IOException("图片写入失败")
+                }
+            } ?: throw IOException("无法写入文件")
+        } finally {
+            bitmap.recycle()
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, this, null, null)
+            }
+        }
+    } catch (error: Exception) {
+        resolver.delete(uri, null, null)
+        throw error
+    }
+}
+
+/** 保存单个远程视频：live 实况里每段真实视频单独保存 */
+internal fun saveRemoteVideo(context: Context, videoUrl: String, index: Int) {
     saveRemoteFile(
         context = context,
+        sourceUrl = videoUrl,
+        displayName = "douyin_${timestamp()}_${index + 1}.mp4",
+        mimeType = "video/mp4",
+        collection = MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        relativePath = "${Environment.DIRECTORY_MOVIES}/小寒去水印"
+    )
+}
+
+internal fun saveSingleImage(context: Context, imageUrl: String) {
+    saveRemoteImageAsJpeg(
+        context = context,
         sourceUrl = imageUrl,
-        displayName = "douyin_${timestamp()}.jpg",
-        mimeType = "image/jpeg",
-        collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        relativePath = "${Environment.DIRECTORY_PICTURES}/小寒去水印"
+        displayName = "douyin_${timestamp()}.jpg"
     )
 }
 

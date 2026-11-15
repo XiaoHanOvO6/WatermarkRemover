@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Colorize
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -38,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import demo.app.analysisapp.data.ApiChannel
 import demo.app.analysisapp.theme.SeedColors
 
 enum class ThemeMode(val label: String) {
@@ -47,14 +49,17 @@ enum class ThemeMode(val label: String) {
 }
 
 @Composable
-fun SettingsScreen(
+internal fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     themeColor: String,
-    onThemeColorChange: (String) -> Unit
+    onThemeColorChange: (String) -> Unit,
+    apiChannel: ApiChannel,
+    onApiChannelChange: (ApiChannel) -> Unit
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showColorDialog by remember { mutableStateOf(false) }
+    var showChannelDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -111,6 +116,28 @@ fun SettingsScreen(
         )
         HorizontalDivider(modifier = Modifier.padding(start = 20.dp, end = 20.dp))
 
+        SectionHeader("解析")
+        ListItem(
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Filled.SwapHoriz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            headlineContent = { Text("解析线路") },
+            supportingContent = { Text(apiChannel.label) },
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            modifier = Modifier.clickable { showChannelDialog = true }
+        )
+        HorizontalDivider(modifier = Modifier.padding(start = 20.dp, end = 20.dp))
+
         SectionHeader("关于")
         ListItem(
             leadingContent = {
@@ -121,7 +148,7 @@ fun SettingsScreen(
                 )
             },
             headlineContent = { Text("版本") },
-            supportingContent = { Text("小寒去水印 v2.0") }
+            supportingContent = { Text("小寒去水印 v3.0") }
         )
     }
 
@@ -157,6 +184,44 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showThemeDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    if (showChannelDialog) {
+        AlertDialog(
+            onDismissRequest = { showChannelDialog = false },
+            title = { Text("解析线路") },
+            text = {
+                Column {
+                    ApiChannel.entries.forEach { channel ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onApiChannelChange(channel)
+                                    showChannelDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = apiChannel == channel,
+                                onClick = {
+                                    onApiChannelChange(channel)
+                                    showChannelDialog = false
+                                }
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(channel.label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showChannelDialog = false }) {
                     Text("取消")
                 }
             }

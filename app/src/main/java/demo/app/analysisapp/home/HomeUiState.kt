@@ -20,6 +20,7 @@ internal class HomeUiState {
     var pendingSave by mutableStateOf<ParseResult?>(null)
     var pendingSaveImageUrl by mutableStateOf<String?>(null)
     var pendingSaveVideoIndex by mutableStateOf<Int?>(null)
+    var pendingSaveRemoteVideoIndex by mutableStateOf<Int?>(null)
 
     /** 解析完成后自动合成好的视频，图文 / live 才有 */
     var videos by mutableStateOf<List<SlideVideo>>(emptyList())

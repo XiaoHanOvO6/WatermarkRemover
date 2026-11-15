@@ -18,12 +18,17 @@ internal data class ParseResult(
     val title: String,
     val authorName: String,
     val coverUrl: String,
-    val videoUrl: String?,
-    val imageUrls: List<String>,
-    val publishTime: String,
+    /** 视频直链：云汐的 live 实况可能返回多个 */
+    val videoUrls: List<String> = emptyList(),
+    val imageUrls: List<String> = emptyList(),
+    val publishTime: String = "",
     /** 背景音乐直链：图文 / live 合成视频时用 */
     val musicUrl: String = ""
 )
+
+/** 首个视频直链，单视频场景直接用 */
+internal val ParseResult.videoUrl: String?
+    get() = videoUrls.firstOrNull()
 
 /** 是否是 live 实况（接口 内容类型 返回 live） */
 internal val ParseResult.isLive: Boolean
@@ -36,7 +41,11 @@ internal val ParseResult.typeLabel: String
 /** 资源数量摘要 */
 internal val ParseResult.resourceSummary: String
     get() = when (kind) {
-        ContentKind.Video -> if (videoUrl.isNullOrBlank()) "未返回视频直链" else "1 个视频"
+        ContentKind.Video -> when (videoUrls.size) {
+            0 -> "未返回视频直链"
+            1 -> "1 个视频"
+            else -> "${videoUrls.size} 个视频"
+        }
         ContentKind.Images -> "${imageUrls.size} 张图片"
         ContentKind.Unsupported -> "暂不支持 $rawType"
     }
@@ -44,7 +53,7 @@ internal val ParseResult.resourceSummary: String
 /** 是否可保存 */
 internal val ParseResult.canSave: Boolean
     get() = when (kind) {
-        ContentKind.Video -> !videoUrl.isNullOrBlank()
+        ContentKind.Video -> videoUrls.isNotEmpty()
         ContentKind.Images -> imageUrls.isNotEmpty()
         ContentKind.Unsupported -> false
     }
@@ -52,11 +61,11 @@ internal val ParseResult.canSave: Boolean
 /** 保存按钮文案：live 转成了视频来展示，所以按钮是「保存静态图」 */
 internal val ParseResult.saveButtonText: String
     get() = when (kind) {
-        ContentKind.Video -> "保存视频"
+        ContentKind.Video -> if (videoUrls.size > 1) "保存全部视频" else "保存视频"
         ContentKind.Images -> if (isLive) "保存静态图" else "保存全部图片"
         ContentKind.Unsupported -> "暂不支持保存"
     }
 
-/** 只有 live 实况才合成视频；图文、视频都保持原样 */
+/** 只有 live 实况且接口没给真实视频时，才用图片合成视频 */
 internal val ParseResult.canMakeVideo: Boolean
-    get() = isLive && imageUrls.isNotEmpty()
+    get() = isLive && videoUrls.isEmpty() && imageUrls.isNotEmpty()

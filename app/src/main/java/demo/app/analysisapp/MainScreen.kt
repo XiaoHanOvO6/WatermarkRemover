@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import demo.app.analysisapp.data.ApiChannel
 import demo.app.analysisapp.home.DouyinParserScreen
 import demo.app.analysisapp.home.HomeUiState
 import demo.app.analysisapp.settings.SettingsScreen
@@ -34,7 +35,9 @@ internal fun MainScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     themeColor: String,
-    onThemeColorChange: (String) -> Unit
+    onThemeColorChange: (String) -> Unit,
+    apiChannel: ApiChannel,
+    onApiChannelChange: (ApiChannel) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(MainTab.Home) }
     val homeState = remember { HomeUiState() }
@@ -65,12 +68,14 @@ internal fun MainScreen(
             color = MaterialTheme.colorScheme.background
         ) {
             when (selectedTab) {
-                MainTab.Home -> DouyinParserScreen(state = homeState)
+                MainTab.Home -> DouyinParserScreen(state = homeState, apiChannel = apiChannel)
                 MainTab.Settings -> SettingsScreen(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,
                     themeColor = themeColor,
-                    onThemeColorChange = onThemeColorChange
+                    onThemeColorChange = onThemeColorChange,
+                    apiChannel = apiChannel,
+                    onApiChannelChange = onApiChannelChange
                 )
             }
         }

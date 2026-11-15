@@ -31,6 +31,7 @@ import demo.app.analysisapp.data.copyToClipboard
 import demo.app.analysisapp.data.resourceSummary
 import demo.app.analysisapp.data.saveButtonText
 import demo.app.analysisapp.data.typeLabel
+import demo.app.analysisapp.data.videoUrl
 @Composable
 internal fun ResultPanel(
     result: ParseResult,
@@ -39,7 +40,8 @@ internal fun ResultPanel(
     isSaving: Boolean,
     onSave: () -> Unit,
     onSaveSingleImage: (String) -> Unit,
-    onSaveVideo: (Int) -> Unit
+    onSaveVideo: (Int) -> Unit,
+    onSaveRemoteVideo: (Int) -> Unit
 ) {
     val context = LocalContext.current
     ElevatedCard(
@@ -64,11 +66,13 @@ internal fun ResultPanel(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
-                    text = result.publishTime.ifBlank { result.rawType },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (result.publishTime.isNotBlank()) {
+                    Text(
+                        text = result.publishTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             Text(
@@ -89,7 +93,8 @@ internal fun ResultPanel(
                 isMakingVideo = isMakingVideo,
                 isSaving = isSaving,
                 onSaveSingleImage = onSaveSingleImage,
-                onSaveVideo = onSaveVideo
+                onSaveVideo = onSaveVideo,
+                onSaveRemoteVideo = onSaveRemoteVideo
             )
 
             CopyActions(result = result, context = context)

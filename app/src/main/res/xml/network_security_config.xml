@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 云汐解析接口（线路一）只提供 http，这里仅对该域名放行明文，其余请求仍强制 https -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">yfufu.com</domain>
+    </domain-config>
+</network-security-config>
