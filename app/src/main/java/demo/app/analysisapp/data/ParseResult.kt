@@ -25,9 +25,13 @@ internal data class ParseResult(
     val musicUrl: String = ""
 )
 
+/** 是否是 live 实况（接口 内容类型 返回 live） */
+internal val ParseResult.isLive: Boolean
+    get() = rawType.equals("live", ignoreCase = true)
+
 /** 界面显示的类型名称（接口返回 live 时单独标注） */
 internal val ParseResult.typeLabel: String
-    get() = if (rawType.equals("live", ignoreCase = true)) "live 实况" else kind.label
+    get() = if (isLive) "live 实况" else kind.label
 
 /** 资源数量摘要 */
 internal val ParseResult.resourceSummary: String
@@ -45,14 +49,14 @@ internal val ParseResult.canSave: Boolean
         ContentKind.Unsupported -> false
     }
 
-/** 保存按钮文案 */
+/** 保存按钮文案：live 转成了视频来展示，所以按钮是「保存静态图」 */
 internal val ParseResult.saveButtonText: String
     get() = when (kind) {
         ContentKind.Video -> "保存视频"
-        ContentKind.Images -> "保存静态图"
+        ContentKind.Images -> if (isLive) "保存静态图" else "保存全部图片"
         ContentKind.Unsupported -> "暂不支持保存"
     }
 
-/** 是否可以合成视频（图文 / live 才有图片可合成） */
+/** 只有 live 实况才合成视频；图文、视频都保持原样 */
 internal val ParseResult.canMakeVideo: Boolean
-    get() = kind == ContentKind.Images && imageUrls.isNotEmpty()
+    get() = isLive && imageUrls.isNotEmpty()
