@@ -11,8 +11,8 @@ android {
         applicationId = "demo.app.analysisapp"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "3.0"
+        versionCode = 5
+        versionName = "5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

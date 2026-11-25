@@ -5,6 +5,12 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,9 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -40,7 +46,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 @Composable
-internal fun DouyinParserScreen(state: HomeUiState, apiChannel: ApiChannel) {
+internal fun DouyinParserScreen(
+    state: HomeUiState,
+    apiChannel: ApiChannel
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -208,7 +217,7 @@ internal fun DouyinParserScreen(state: HomeUiState, apiChannel: ApiChannel) {
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Header()
 
@@ -289,17 +298,26 @@ internal fun DouyinParserScreen(state: HomeUiState, apiChannel: ApiChannel) {
         state.errorMessage?.let { StatusCard(text = it, isError = true) }
         state.saveMessage?.let { StatusCard(text = it, isError = false) }
 
-        state.result?.let {
-            ResultPanel(
-                result = it,
-                videos = state.videos,
-                isMakingVideo = state.isMakingVideo,
-                isSaving = state.isSaving,
-                onSave = { requestSave(it) },
-                onSaveSingleImage = { requestSaveImage(it) },
-                onSaveVideo = { index -> requestSaveVideoAt(index) },
-                onSaveRemoteVideo = { index -> requestSaveRemoteVideoAt(index) }
-            )
+        AnimatedContent(
+            targetState = state.result,
+            transitionSpec = {
+                (fadeIn() + expandVertically(expandFrom = Alignment.Top)) togetherWith
+                    (fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top))
+            },
+            label = "result"
+        ) { result ->
+            if (result != null) {
+                ResultPanel(
+                    result = result,
+                    videos = state.videos,
+                    isMakingVideo = state.isMakingVideo,
+                    isSaving = state.isSaving,
+                    onSave = { requestSave(result) },
+                    onSaveSingleImage = { requestSaveImage(it) },
+                    onSaveVideo = { index -> requestSaveVideoAt(index) },
+                    onSaveRemoteVideo = { index -> requestSaveRemoteVideoAt(index) }
+                )
+            }
         }
     }
 }
@@ -309,8 +327,8 @@ private fun Header() {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = "抖音解析",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = "粘贴分享口令或链接，自动提取无水印资源",

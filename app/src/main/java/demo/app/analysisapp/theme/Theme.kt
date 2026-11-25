@@ -60,6 +60,7 @@ fun 小寒去水印Theme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
+        shapes = AppShapes,
         content = content
     )
 }

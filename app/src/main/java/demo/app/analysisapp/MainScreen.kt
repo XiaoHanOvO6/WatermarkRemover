@@ -68,7 +68,11 @@ internal fun MainScreen(
             color = MaterialTheme.colorScheme.background
         ) {
             when (selectedTab) {
-                MainTab.Home -> DouyinParserScreen(state = homeState, apiChannel = apiChannel)
+                MainTab.Home -> DouyinParserScreen(
+                    state = homeState,
+                    apiChannel = apiChannel
+                )
+
                 MainTab.Settings -> SettingsScreen(
                     themeMode = themeMode,
                     onThemeModeChange = onThemeModeChange,

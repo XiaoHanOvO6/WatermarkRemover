@@ -411,7 +411,9 @@ private fun VideoPreview(videoUrl: String) {
     AndroidView(
         modifier = Modifier
             .fillMaxWidth()
-            .height(240.dp),
+            .height(240.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(Color.Black),
         factory = { context ->
             val videoView = VideoView(context)
             val mediaController = MediaController(context)
@@ -449,7 +451,7 @@ private fun NetworkImagePreview(
     }
 
     Box(
-        modifier = modifier,
+        modifier = modifier.clip(MaterialTheme.shapes.medium),
         contentAlignment = Alignment.Center
     ) {
         val imageBitmap = imageBitmapState.value

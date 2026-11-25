@@ -1,6 +1,9 @@
 package demo.app.analysisapp.settings
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Colorize
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
@@ -37,7 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import demo.app.analysisapp.data.ApiChannel
 import demo.app.analysisapp.theme.SeedColors
@@ -47,6 +51,8 @@ enum class ThemeMode(val label: String) {
     Light("浅色"),
     Dark("深色")
 }
+
+private const val PROJECT_URL = "https://github.com/XiaoHanOvO6/WatermarkRemover"
 
 @Composable
 internal fun SettingsScreen(
@@ -60,17 +66,20 @@ internal fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showColorDialog by remember { mutableStateOf(false) }
     var showChannelDialog by remember { mutableStateOf(false) }
+    var showLinkDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .padding(bottom = 24.dp)
     ) {
         Text(
             text = "设置",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 4.dp)
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(start = 20.dp, top = 24.dp, end = 20.dp, bottom = 8.dp)
         )
 
         SectionHeader("外观")
@@ -110,11 +119,16 @@ internal fun SettingsScreen(
                         .size(24.dp)
                         .clip(CircleShape)
                         .background(colorPreview(themeColor))
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
                 )
             },
             modifier = Modifier.clickable { showColorDialog = true }
         )
-        HorizontalDivider(modifier = Modifier.padding(start = 20.dp, end = 20.dp))
+
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        )
 
         SectionHeader("解析")
         ListItem(
@@ -136,7 +150,10 @@ internal fun SettingsScreen(
             },
             modifier = Modifier.clickable { showChannelDialog = true }
         )
-        HorizontalDivider(modifier = Modifier.padding(start = 20.dp, end = 20.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        )
 
         SectionHeader("关于")
         ListItem(
@@ -148,13 +165,61 @@ internal fun SettingsScreen(
                 )
             },
             headlineContent = { Text("版本") },
-            supportingContent = { Text("小寒去水印 v3.0") }
+            supportingContent = { Text("小寒去水印 v5.0") }
+        )
+
+        ListItem(
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Filled.Link,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            headlineContent = { Text("项目地址") },
+            trailingContent = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            modifier = Modifier.clickable { showLinkDialog = true }
+        )
+    }
+
+    if (showLinkDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkDialog = false },
+            shape = MaterialTheme.shapes.large,
+            title = { Text("外部链接") },
+            text = { Text("即将在浏览器中打开：\n$PROJECT_URL") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLinkDialog = false
+                        runCatching {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))
+                            )
+                        }
+                    }
+                ) {
+                    Text("前往")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLinkDialog = false }) {
+                    Text("取消")
+                }
+            }
         )
     }
 
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("主题模式") },
             text = {
                 Column {
@@ -193,6 +258,7 @@ internal fun SettingsScreen(
     if (showChannelDialog) {
         AlertDialog(
             onDismissRequest = { showChannelDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("解析线路") },
             text = {
                 Column {
@@ -231,6 +297,7 @@ internal fun SettingsScreen(
     if (showColorDialog) {
         AlertDialog(
             onDismissRequest = { showColorDialog = false },
+            shape = MaterialTheme.shapes.large,
             title = { Text("主题色") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -286,6 +353,7 @@ private fun ColorOptionRow(
                 .size(24.dp)
                 .clip(CircleShape)
                 .background(swatch)
+                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
         )
         Spacer(Modifier.width(8.dp))
         Text(name)
@@ -306,7 +374,7 @@ private fun SectionHeader(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 28.dp, top = 18.dp, bottom = 4.dp)
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 4.dp)
     )
 }
